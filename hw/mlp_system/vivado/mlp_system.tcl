@@ -27,8 +27,6 @@
 #
 # 3. The following remote source files that were added to the original project:-
 #
-#    "C:/Users/mluck/git/cpre-482x-mac-lab/hw/mlp/vivado/bd/mlp_design/hdl/mlp_design_wrapper.vhd"
-#    "C:/Users/mluck/git/cpre-482x-mac-lab/hw/mlp/vivado/constr/zedboard_master.xdc"
 #
 #*****************************************************************************************
 
@@ -174,9 +172,9 @@ if {[string equal [get_filesets -quiet constrs_1] ""]} {
 set obj [get_filesets constrs_1]
 
 # Add/Import constrs file and set constrs file properties
-set file "[file normalize "$origin_dir/../../cpre-482x-mac-lab/hw/mlp/vivado/constr/zedboard_master.xdc"]"
+set file "[file normalize "$origin_dir/../hdl/zedboard.xdc"]"
 set file_added [add_files -norecurse -fileset $obj [list $file]]
-set file "$origin_dir/../hdl/zedboard_master.xdc"
+set file "$origin_dir/../hdl/zedboard.xdc"
 set file [file normalize $file]
 set file_obj [get_files -of_objects [get_filesets constrs_1] [list "*$file"]]
 set_property -name "file_type" -value "XDC" -objects $file_obj
@@ -922,8 +920,8 @@ pagesize -pg 1 -db -bbox -sgen 0 -30 1980 1340
   save_bd_design
   close_bd_design $design_name 
 }
-# End of cr_bd_mlp_design()
-cr_bd_mlp_design ""
+# End of cr_bd_mlp_system_design()
+cr_bd_mlp_system_design ""
 set_property REGISTERED_WITH_MANAGER "1" [get_files mlp_system_design.bd ] 
 set_property SYNTH_CHECKPOINT_MODE "Hierarchical" [get_files mlp_system_design.bd ] 
 
