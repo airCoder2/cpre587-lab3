@@ -13,30 +13,54 @@ add_force {/piped_mac/M_AXIS_TREADY} -radix hex {1 0ns}
 add_force {/piped_mac/S_AXIS_TVALID} -radix hex {1 0ns}
 add_force {/piped_mac/S_AXIS_TLAST} -radix hex {1 0ns}
 add_force {/piped_mac/S_AXIS_TID} -radix hex {1 0ns}
+add_force {/piped_mac/S_AXIS_TDATA} -radix hex {FFFF000022220000 0ns}
+add_force {/piped_mac/S_AXIS_TUSER} -radix hex {0 0ns}
+run 10ns
+add_force {/piped_mac/S_AXIS_TVALID} -radix hex {0 0ns}
+run 50ns
+# Expected:
+#   0xDDDE_0000
+
+# 1. Basic Single Operation (Underflow)
+add_force {/piped_mac/S_AXIS_TVALID} -radix hex {1 0ns}
+add_force {/piped_mac/S_AXIS_TLAST} -radix hex {1 0ns}
+add_force {/piped_mac/S_AXIS_TID} -radix hex {1 0ns}
+add_force {/piped_mac/S_AXIS_TDATA} -radix hex {8111000022220000 0ns}
+add_force {/piped_mac/S_AXIS_TUSER} -radix hex {0 0ns}
+run 10ns
+add_force {/piped_mac/S_AXIS_TVALID} -radix hex {0 0ns}
+run 50ns
+# Expected:
+#   0x8000_0000 [Underflow]
+
+# 1. Basic Single Operation (Overflow)
+add_force {/piped_mac/S_AXIS_TVALID} -radix hex {1 0ns}
+add_force {/piped_mac/S_AXIS_TLAST} -radix hex {1 0ns}
+add_force {/piped_mac/S_AXIS_TID} -radix hex {1 0ns}
 add_force {/piped_mac/S_AXIS_TDATA} -radix hex {1111111122222222 0ns}
 add_force {/piped_mac/S_AXIS_TUSER} -radix hex {0 0ns}
 run 10ns
 add_force {/piped_mac/S_AXIS_TVALID} -radix hex {0 0ns}
 run 50ns
 # Expected:
-#   8ACF_0ECA
+#   0x7FFF_FFFF [Overflow]
 
 
 # 2. Basic Double Operation
 add_force {/piped_mac/S_AXIS_TVALID} -radix hex {1 0ns}
 add_force {/piped_mac/S_AXIS_TLAST} -radix hex {0 0ns}
 add_force {/piped_mac/S_AXIS_TID} -radix hex {2 0ns}
-add_force {/piped_mac/S_AXIS_TDATA} -radix hex {1111111122222222 0ns}
+add_force {/piped_mac/S_AXIS_TDATA} -radix hex {0011111100222222 0ns}
 add_force {/piped_mac/S_AXIS_TUSER} -radix hex {0 0ns}
 run 10ns
 add_force {/piped_mac/S_AXIS_TLAST} -radix hex {1 0ns}
-add_force {/piped_mac/S_AXIS_TDATA} -radix hex {1010101020202020 0ns}
+add_force {/piped_mac/S_AXIS_TDATA} -radix hex {0010101000202020 0ns}
 run 10ns
 add_force {/piped_mac/S_AXIS_TLAST} -radix hex {0 0ns}
 add_force {/piped_mac/S_AXIS_TVALID} -radix hex {0 0ns}
 run 50ns
 # Expected:
-#   0x0608_0604 [Overflow]
+#   0x0020_4060
 
 
 # 3. Basic Single Operation back-to-back
@@ -100,7 +124,7 @@ run 10ns
 add_force {/piped_mac/S_AXIS_TVALID} -radix hex {0 0ns}
 run 50 ns
 # Expected:
-#   0x8883_3338
+#   0x0000_8883
 
 
 # Apply Back Pressure
@@ -111,7 +135,7 @@ run 10ns
 add_force {/piped_mac/S_AXIS_TVALID} -radix hex {1 0ns}
 add_force {/piped_mac/S_AXIS_TLAST} -radix hex {1 0ns}
 add_force {/piped_mac/S_AXIS_TID} -radix hex {A 0ns}
-add_force {/piped_mac/S_AXIS_TDATA} -radix hex {1111111122222222 0ns}
+add_force {/piped_mac/S_AXIS_TDATA} -radix hex {0044455500333111 0ns}
 add_force {/piped_mac/S_AXIS_TUSER} -radix hex {0 0ns}
 run 10ns
 add_force {/piped_mac/S_AXIS_TVALID} -radix hex {0 0ns}
@@ -120,5 +144,5 @@ run 30ns
 add_force {/piped_mac/M_AXIS_TREADY} -radix hex {0 0ns}
 run 50ns
 # Expected:
-#   0x8ACF_0ECA [Overflow]
+#   0x0DA6_E5BC
 

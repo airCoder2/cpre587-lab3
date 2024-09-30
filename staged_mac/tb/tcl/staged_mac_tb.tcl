@@ -10,7 +10,7 @@ run 20
 
 # 1. Basic Single Operation
 # Expected Multiplication Output: 0x0246 8ACF 0ECA 8642
-# Expected Truncated Output: 0x8ACF 0ECA
+# Expected Truncated Output would be 0x8ACF 0ECA, but due to saturation, it is 0x7FFF FFFF (+MAX)
 force sim:/staged_mac/SD_AXIS_TVALID 1 0
 force sim:/staged_mac/SD_AXIS_TDATA 16#1111111122222222 0
 force sim:/staged_mac/SD_AXIS_TID 16#1 0
