@@ -60,7 +60,7 @@ add_force {/piped_mac/S_AXIS_TLAST} -radix hex {0 0ns}
 add_force {/piped_mac/S_AXIS_TVALID} -radix hex {0 0ns}
 run 50ns
 # Expected:
-#   0x0020_4060
+#   0x044A_90CE
 
 
 # 3. Basic Single Operation back-to-back
