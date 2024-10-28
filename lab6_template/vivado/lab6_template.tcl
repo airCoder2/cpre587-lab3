@@ -76,6 +76,7 @@ proc print_help {} {
   exit 0
 }
 
+
 if { $::argc > 0 } {
   for {set i 0} {$i < $::argc} {incr i} {
     set option [string trim [lindex $::argv $i]]
@@ -149,7 +150,7 @@ set files [list \
  [file normalize "${origin_dir}/../hdl/bram_mux.vhd" ]\
  [file normalize "${origin_dir}/../hdl/bram_read_delay.vhd" ]\
 ]
-set imported_files [import_files -fileset sources_1 $files]
+set imported_files [add_files -fileset sources_1 $files]
 
 # Set 'sources_1' fileset file properties for remote files
 # None
@@ -226,15 +227,15 @@ set obj [get_filesets constrs_1]
 
 # Add/Import constrs file and set constrs file properties
 set file "[file normalize ${origin_dir}/../hdl/zedboard.xdc]"
-set file_imported [import_files -fileset constrs_1 [list $file]]
+set file_imported [add_files -fileset constrs_1 [list $file]]
 set file "hdl/zedboard.xdc"
 set file_obj [get_files -of_objects [get_filesets constrs_1] [list "*$file"]]
 set_property -name "file_type" -value "XDC" -objects $file_obj
 
 # Set 'constrs_1' fileset properties
 set obj [get_filesets constrs_1]
-set_property -name "target_constrs_file" -value "$proj_dir/${_xil_proj_name_}.srcs/constrs_1/imports/hdl/zedboard.xdc" -objects $obj
-set_property -name "target_ucf" -value "$proj_dir/${_xil_proj_name_}.srcs/constrs_1/imports/hdl/zedboard.xdc" -objects $obj
+set_property -name "target_constrs_file" -value "[file normalize ${origin_dir}/../hdl/zedboard.xdc]" -objects $obj
+set_property -name "target_ucf" -value "[file normalize ${origin_dir}/../hdl/zedboard.xdc]" -objects $obj
 
 # Create 'sim_1' fileset (if not found)
 if {[string equal [get_filesets -quiet sim_1] ""]} {
@@ -2686,3 +2687,5 @@ move_dashboard_gadget -name {drc_1} -row 2 -col 0
 move_dashboard_gadget -name {timing_1} -row 0 -col 1
 move_dashboard_gadget -name {utilization_2} -row 1 -col 1
 move_dashboard_gadget -name {methodology_1} -row 2 -col 1
+
+update_compile_order -fileset sources_1
