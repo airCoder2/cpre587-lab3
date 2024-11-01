@@ -94,6 +94,10 @@ end mac_stream_provider;
 architecture behavioral of mac_stream_provider is
 
     signal s_reg0_s_axis_tready : std_logic;
+    signal s_reg0_s_axis_tdata : std_logic_vector(INPUT_ADDR_WIDTH+FILTER_ADDR_WIDTH-1 downto 0);
+    signal s_reg0_m_axis_tdata : std_logic_vector(INPUT_ADDR_WIDTH+FILTER_ADDR_WIDTH-1 downto 0);
+    signal s_reg0_m_axis_tdata_input : std_logic_vector(INPUT_ADDR_WIDTH-1 downto 0);
+    signal s_reg0_m_axis_tdata_filter : std_logic_vector(FILTER_ADDR_WIDTH-1 downto 0);
 
     signal s_reg1_s_axis_tready : std_logic;
     signal s_reg1_s_axis_input_data : std_logic_vector(MAC_DATA_WIDTH-1 downto 0);
@@ -119,26 +123,37 @@ architecture behavioral of mac_stream_provider is
     -- Buffer data coming from BRAM units to help meet timing constraints
 
     signal s_bram_en : std_logic;
+    signal s_bram_input_addr : std_logic_vector(INPUT_ADDR_WIDTH-1 downto 0);
+    signal s_bram_filter_addr : std_logic_vector(FILTER_ADDR_WIDTH-1 downto 0);
+    signal s_backlogged : std_logic;
 
 begin
 
     S_AXIS_TREADY <= s_reg0_s_axis_tready;
 
+    process(clk) begin
+        if rising_edge(clk) then
+            s_backlogged <= s_reg1_s_axis_tvalid and not s_reg1_s_axis_tready;
+        end if;
+    end process;
+
+    s_reg0_s_axis_tdata(INPUT_ADDR_WIDTH+FILTER_ADDR_WIDTH-1 downto FILTER_ADDR_WIDTH) <= S_AXIS_TDATA_input_addr;
+    s_reg0_s_axis_tdata(FILTER_ADDR_WIDTH-1 downto 0) <= S_AXIS_TDATA_filter_addr;
     -- BRAM units read on the clock edge, this delays the stream control signals appropriately
     g_register0: entity work.axis_register_slice
         generic map(
-            C_DATA_WIDTH => 1,
+            C_DATA_WIDTH => 14,
             C_TID_WIDTH => 1
         )
         port map(
             S_AXIS_TREADY => s_reg0_s_axis_tready,
-            S_AXIS_TDATA => (others => '0'),
+            S_AXIS_TDATA => s_reg0_s_axis_tdata,
             S_AXIS_TLAST => S_AXIS_TLAST,
             S_AXIS_TID => (others => '0'),
             S_AXIS_TVALID => S_AXIS_TVALID,
 
             M_AXIS_TREADY => s_reg1_s_axis_tready,
-            M_AXIS_TDATA => open,
+            M_AXIS_TDATA => s_reg0_m_axis_tdata,
             M_AXIS_TLAST => s_reg1_s_axis_tlast,
             M_AXIS_TID => open,
             M_AXIS_TVALID => s_reg1_s_axis_tvalid,
@@ -146,9 +161,15 @@ begin
             rst => rst,
             clk => clk
         );
-    
+    s_reg0_m_axis_tdata_input <= s_reg0_m_axis_tdata(INPUT_ADDR_WIDTH+FILTER_ADDR_WIDTH-1 downto FILTER_ADDR_WIDTH);
+    s_reg0_m_axis_tdata_filter <= s_reg0_m_axis_tdata(FILTER_ADDR_WIDTH-1 downto 0);
+
     -- BRAM units should be enabled when reg0 latches
     s_bram_en <= S_AXIS_TVALID and s_reg0_s_axis_tready;
+
+    -- Be careful of becoming backlogged
+    s_bram_input_addr <= s_reg0_m_axis_tdata_input when s_backlogged = '1' else S_AXIS_TDATA_input_addr;
+    s_bram_filter_addr <= s_reg0_m_axis_tdata_filter when s_backlogged = '1' else S_AXIS_TDATA_filter_addr;
 
     g_input_fetcher: entity work.bram_slice_fetcher
         generic map(
@@ -166,7 +187,7 @@ begin
             BRAM_rst => BRAM_INPUT_rst,
             BRAM_clk => BRAM_INPUT_clk,
 
-            addr => S_AXIS_TDATA_input_addr,
+            addr => s_bram_input_addr,
             data => s_reg1_s_axis_input_data,
 
             en => s_bram_en,
@@ -190,7 +211,7 @@ begin
             BRAM_rst => BRAM_FILTER0_rst,
             BRAM_clk => BRAM_FILTER0_clk,
 
-            addr => S_AXIS_TDATA_filter_addr,
+            addr => s_bram_filter_addr,
             data => s_reg1_s_axis_filter0_data,
 
             en => s_bram_en,
@@ -214,7 +235,7 @@ begin
             BRAM_rst => BRAM_FILTER1_rst,
             BRAM_clk => BRAM_FILTER1_clk,
 
-            addr => S_AXIS_TDATA_filter_addr,
+            addr => s_bram_filter_addr,
             data => s_reg1_s_axis_filter1_data,
 
             en => s_bram_en,
@@ -238,7 +259,7 @@ begin
             BRAM_rst => BRAM_FILTER2_rst,
             BRAM_clk => BRAM_FILTER2_clk,
 
-            addr => S_AXIS_TDATA_filter_addr,
+            addr => s_bram_filter_addr,
             data => s_reg1_s_axis_filter2_data,
 
             en => s_bram_en,
@@ -262,7 +283,7 @@ begin
             BRAM_rst => BRAM_FILTER3_rst,
             BRAM_clk => BRAM_FILTER3_clk,
 
-            addr => S_AXIS_TDATA_filter_addr,
+            addr => s_bram_filter_addr,
             data => s_reg1_s_axis_filter3_data,
 
             en => s_bram_en,
