@@ -132,17 +132,17 @@ begin
     S_AXIS_TREADY <= s_reg0_s_axis_tready;
 
     process(clk) begin
-        if rising_edge(clk) begin
+        if rising_edge(clk) then
             s_backlogged <= s_reg1_s_axis_tvalid and not s_reg1_s_axis_tready;
-        end
-    end
+        end if;
+    end process;
 
     s_reg0_s_axis_tdata(INPUT_ADDR_WIDTH+FILTER_ADDR_WIDTH-1 downto FILTER_ADDR_WIDTH) <= S_AXIS_TDATA_input_addr;
     s_reg0_s_axis_tdata(FILTER_ADDR_WIDTH-1 downto 0) <= S_AXIS_TDATA_filter_addr;
     -- BRAM units read on the clock edge, this delays the stream control signals appropriately
     g_register0: entity work.axis_register_slice
         generic map(
-            C_DATA_WIDTH => 1,
+            C_DATA_WIDTH => 14,
             C_TID_WIDTH => 1
         )
         port map(
