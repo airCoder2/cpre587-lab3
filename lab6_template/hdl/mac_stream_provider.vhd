@@ -98,6 +98,8 @@ architecture behavioral of mac_stream_provider is
     signal s_reg0_m_axis_tdata : std_logic_vector(INPUT_ADDR_WIDTH+FILTER_ADDR_WIDTH-1 downto 0);
     signal s_reg0_m_axis_tdata_input : std_logic_vector(INPUT_ADDR_WIDTH-1 downto 0);
     signal s_reg0_m_axis_tdata_filter : std_logic_vector(FILTER_ADDR_WIDTH-1 downto 0);
+    signal s_reg0_m_axis_tready : std_logic;
+    signal s_reg0_m_axis_tvalid : std_logic;
 
     signal s_reg1_s_axis_tready : std_logic;
     signal s_reg1_s_axis_input_data : std_logic_vector(MAC_DATA_WIDTH-1 downto 0);
@@ -142,7 +144,7 @@ begin
     -- BRAM units read on the clock edge, this delays the stream control signals appropriately
     g_register0: entity work.axis_register_slice
         generic map(
-            C_DATA_WIDTH => 14,
+            C_DATA_WIDTH => INPUT_ADDR_WIDTH+FILTER_ADDR_WIDTH,
             C_TID_WIDTH => 1
         )
         port map(
@@ -152,17 +154,20 @@ begin
             S_AXIS_TID => (others => '0'),
             S_AXIS_TVALID => S_AXIS_TVALID,
 
-            M_AXIS_TREADY => s_reg1_s_axis_tready,
+            M_AXIS_TREADY => s_reg0_m_axis_tready,
             M_AXIS_TDATA => s_reg0_m_axis_tdata,
             M_AXIS_TLAST => s_reg1_s_axis_tlast,
             M_AXIS_TID => open,
-            M_AXIS_TVALID => s_reg1_s_axis_tvalid,
+            M_AXIS_TVALID => s_reg0_m_axis_tvalid,
             
             rst => rst,
             clk => clk
         );
     s_reg0_m_axis_tdata_input <= s_reg0_m_axis_tdata(INPUT_ADDR_WIDTH+FILTER_ADDR_WIDTH-1 downto FILTER_ADDR_WIDTH);
     s_reg0_m_axis_tdata_filter <= s_reg0_m_axis_tdata(FILTER_ADDR_WIDTH-1 downto 0);
+
+    s_reg1_s_axis_tvalid <= s_reg0_m_axis_tvalid and not s_backlogged;
+    s_reg0_m_axis_tready <= s_reg1_s_axis_tready and not s_backlogged;
 
     -- BRAM units should be enabled when reg0 latches
     s_bram_en <= S_AXIS_TVALID and s_reg0_s_axis_tready;
