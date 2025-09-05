@@ -8,10 +8,11 @@
 -- piped_mac.vhd
 -------------------------------------------------------------------------
 -- DESCRIPTION: This file contains a basic piplined axi-stream mac unit. It
--- multiplies two integer/Q values togeather and accumulates them.
+-- multiplies two integer values togeather and accumulates them.
 --
 -- NOTES:
 -- 10/25/21 by MPD::Inital template creation
+-- 9/5/25 by CWS::Minor changes to remove Qx.x
 -------------------------------------------------------------------------
 
 library work;
@@ -22,7 +23,7 @@ use IEEE.numeric_std.all;
 entity piped_mac is
   generic(
       -- Parameters of mac
-      C_DATA_WIDTH : integer := 32
+      C_DATA_WIDTH : integer := 8
     );
 	port (
         ACLK	: in	std_logic;
@@ -38,7 +39,7 @@ entity piped_mac is
 
         -- AXIS master accumulate result out interface
 		MO_AXIS_TVALID	: out	std_logic;
-		MO_AXIS_TDATA	: out	std_logic_vector(C_DATA_WIDTH-1 downto 0);
+		MO_AXIS_TDATA	: out	std_logic_vector(31 downto 0);
 		MO_AXIS_TLAST	: out	std_logic;
 		MO_AXIS_TREADY	: in	std_logic;
 		MO_AXIS_TID     : out   std_logic_vector(7 downto 0)
