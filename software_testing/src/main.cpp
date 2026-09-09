@@ -6,13 +6,13 @@ void run_tests(){
 }
 
 #ifdef ZEDBOARD
-i32 main() {
+int main() {
 	std::cout << "Running on the ZEDBoard..." << std::endl;	
 	run_tests();
 	return 0;
 }
 #else
-i32 main() {
+int main() {
 	std::cout << "Running on the Lab computer..." << std::endl;
 	run_tests();
 	return 0;

@@ -4,7 +4,6 @@
 #include <type_traits>
 #include <vector>
 
-namespace ML {
 
 // --- Data Types ---
 using size = std::size_t;
@@ -27,4 +26,3 @@ using fp32 = float;
 using fp64 = double;
 using fp96 = long double;
 
-}  // namespace ML
