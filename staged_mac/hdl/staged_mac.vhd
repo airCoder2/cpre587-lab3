@@ -81,7 +81,8 @@ begin
     -- Assignments
     MO_AXIS_TDATA  <= s_accumulator_reg_out; -- accumulator's reg is the output data
     MO_AXIS_TVALID <= s_master_valid_out;
-    SD_AXIS_TREADY <= s_master_valid_out and MO_AXIS_TREADY;
+    -- Keep accumulating until accumulate data is valid (completed accumulation) and the slave is not ready to consume
+    SD_AXIS_TREADY <= not s_master_valid_out or MO_AXIS_TREADY;
 
     s_adder_operand_a <= s_accumulator_reg_out when (s_master_valid_out = '0') else (others => '0'); 
 
