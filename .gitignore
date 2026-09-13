@@ -93,3 +93,21 @@ cache
 *.run*
 *.sim*
 *.src*
+
+# Vivado generated files
+*.jou
+*.str
+*.log
+*.dmp
+*.pb
+*.wdb
+*.wcfg
+*.ltx
+
+# Vivado project/generated directories
+.cache/
+.hw/
+.ip_user_files/
+.sim/
+.xpr/
+.gen/

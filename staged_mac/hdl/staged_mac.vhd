@@ -45,6 +45,7 @@ entity staged_mac is
 		MO_AXIS_TID     : out   std_logic_vector(7 downto 0)
     );
 
+-- ME: just letting the synthesis tool know that ACLK is clock, so it can route it diffrently
 attribute SIGIS : string; 
 attribute SIGIS of ACLK : signal is "Clk"; 
 
@@ -58,20 +59,55 @@ architecture behavioral of staged_mac is
 	-- Mac state
     type STATE_TYPE is (WAIT_FOR_VALUES);
     signal state : STATE_TYPE;
-	
+
 	-- Debug signals, make sure we aren't going crazy
     signal mac_debug : std_logic_vector(31 downto 0);
 
+    -- Intended behaviour of my circuit
+    -- 1. When last is detected, Accumulate register, which is 32 bits should be reset
+
+    -- MY SIGNALS: 
+    signal s_accumulator_reg_out : std_logic_vector(31 downto 0);
+    signal s_master_valid_out: std_logic;
+
+    signal s_adder_operand_a : std_logic_vector(31 downto 0);
+    signal s_adder_operand_b : std_logic_vector(31 downto 0);
+    signal s_adder_out       : std_logic_vector(31 downto 0);
+
+
+
 begin
 
-    -- Interface signals
+    -- Assignments
+    MO_AXIS_TDATA  <= s_accumulator_reg_out; -- accumulator's reg is the output data
+    MO_AXIS_TVALID <= s_master_valid_out;
+    SD_AXIS_TREADY <= s_master_valid_out and MO_AXIS_TREADY;
 
+    s_adder_operand_a <= s_accumulator_reg_out when (s_master_valid_out = '0') else (others => '0'); 
 
-    -- Internal signals
-	
+    s_adder_operand_b <= (31 downto C_DATA_WIDTH*2 => '0') &
+                         std_logic_vector(unsigned(SD_AXIS_TDATA(C_DATA_WIDTH*2-1 downto C_DATA_WIDTH)) * unsigned(SD_AXIS_TDATA(C_DATA_WIDTH-1 downto 0)))
+                         when (SD_AXIS_TVALID = '1') else (others => '0'); 
+
+    s_adder_out <= std_logic_vector(unsigned(s_adder_operand_a) + unsigned(s_adder_operand_b));
+
 	
 	-- Debug Signals
     mac_debug <= x"00000000";  -- Double checking sanity
+    
+
+
+    process(ACLK) is
+    begin
+        if rising_edge(ACLK) then
+            if ARESETN = '0' then
+                s_master_valid_out <= '0';
+            else
+                s_master_valid_out <= SD_AXIS_TLAST;
+            end if;
+        end if;
+    end process;
+
    
    process (ACLK) is
    begin 
@@ -79,24 +115,12 @@ begin
 
       -- Reset values if reset is low
       if ARESETN = '0' then  -- Reset
-        state       <= WAIT_FOR_VALUES;
-
+        s_accumulator_reg_out <= (others => '0'); -- set the accumulator to 0
       else
-        case state is  -- State
-            -- Wait here until we receive values
-            when WAIT_FOR_VALUES =>
-                -- Wait here until we recieve valid values
-			
-			
-			-- Other stages go here	
-			
-            when others =>
-                state <= WAIT_FOR_VALUES;
-                -- Not really important, this case should never happen
-                -- Needed for proper synthisis         
-        end case;  -- State
+        s_accumulator_reg_out <= s_adder_out;
       end if;  -- Reset
 
     end if;  -- Rising Edge
    end process;
 end architecture behavioral;
+
