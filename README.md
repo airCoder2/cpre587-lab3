@@ -1,1 +1,5 @@
-![Staged Mac](/images/staged_mac.jpg "Staged Mac \(Non-pipelined\)")
+<div align="center">
+  <img src="/images/staged_mac.jpg" alt="Staged Mac" />
+  <br>
+  <sub>Staged Mac (Non-pipelined)</sub>
+</div>
