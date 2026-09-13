@@ -20,6 +20,7 @@ library IEEE;
 use IEEE.std_logic_1164.all;
 use IEEE.numeric_std.all;
 
+
 entity piped_mac is
   generic(
       -- Parameters of mac
@@ -45,6 +46,7 @@ entity piped_mac is
 		MO_AXIS_TID     : out   std_logic_vector(7 downto 0)
     );
 
+-- ME: just letting the synthesis tool know that ACLK is clock, so it can route it diffrently
 attribute SIGIS : string; 
 attribute SIGIS of ACLK : signal is "Clk"; 
 
@@ -55,40 +57,84 @@ architecture behavioral of piped_mac is
     -- Internal Signals
 	
 	
-	-- Mac stages
-    type PIPE_STAGES is (TEMP_STAGE0);
-
-	
 	-- Debug signals, make sure we aren't going crazy
     signal mac_debug : std_logic_vector(31 downto 0);
 
+    -- Intended behaviour of my circuit
+    -- 1. When last is detected, Accumulate register, which is 32 bits should be reset
+
+    -- MY SIGNALS: 
+    signal s_last_in_stage_1_out : std_logic;
+    signal s_delayed_last_in_stage_1_out: std_logic;
+    signal s_delayed_last_in_stage_2_out: std_logic;
+
+    signal s_data_in_stage_1_out : std_logic_vector(C_DATA_WIDTH*2-1 downto 0);
+    signal s_mul_result_stage_2_out : std_logic_vector(31 downto 0);
+
+    signal s_valid_in_stage_1_out : std_logic;
+    signal s_valid_in_stage_2_out : std_logic;
+
+    signal s_accumulator_reg_out : std_logic_vector(31 downto 0);
+
+    signal s_adder_operand_a : std_logic_vector(31 downto 0);
+    signal s_adder_operand_b : std_logic_vector(31 downto 0);
+    signal s_adder_out       : std_logic_vector(31 downto 0);
+
+
 begin
 
-    -- Interface signals
+    -- Assignments
+    MO_AXIS_TDATA  <= s_accumulator_reg_out; -- accumulator's reg is the output data
+    MO_AXIS_TVALID <= s_delayed_last_in_stage_2_out;
+    -- Keep accumulating until accumulate data is valid (completed accumulation) and the slave is not ready to consume
+    SD_AXIS_TREADY <= not s_delayed_last_in_stage_2_out or MO_AXIS_TREADY;
 
+    s_adder_operand_a <= s_accumulator_reg_out when (s_delayed_last_in_stage_2_out = '0') else (others => '0'); 
 
-    -- Internal signals
-	
+    s_adder_operand_b <= s_mul_result_stage_2_out when (s_valid_in_stage_2_out = '1') else (others => '0'); 
+
+    s_adder_out <= std_logic_vector(unsigned(s_adder_operand_a) + unsigned(s_adder_operand_b));
+
 	
 	-- Debug Signals
     mac_debug <= x"00000000";  -- Double checking sanity
-   
-   process (ACLK) is
-   begin 
-    if rising_edge(ACLK) then  -- Rising Edge
+    
 
-      -- Reset values if reset is low
-      if ARESETN = '0' then  -- Reset
-		
-      else
-        for i in PIPE_STAGES'left to PIPE_STAGES'right loop
-            case i is  -- Stages
-                when TEMP_STAGE0 =>
-					-- Template pipline stage 0         
-            end case;  -- Stages
-		end loop;  -- Stages
-      end if;  -- Reset
+    process(ACLK) is
+    begin
+        if rising_edge(ACLK) then
+            if ARESETN = '0' then
 
-    end if;  -- Rising Edge
-   end process;
+                s_last_in_stage_1_out <= '0';
+                s_delayed_last_in_stage_1_out <= '0';
+                s_delayed_last_in_stage_2_out <= '0';
+
+                s_data_in_stage_1_out <= (others => '0');
+                s_mul_result_stage_2_out <= (others => '0');
+
+                s_valid_in_stage_1_out <= '0'; 
+                s_valid_in_stage_2_out <= '0';
+
+                s_accumulator_reg_out  <= (others => '0');
+    
+            else
+                s_last_in_stage_1_out <= SD_AXIS_TLAST;
+                s_delayed_last_in_stage_1_out <= s_last_in_stage_1_out;
+                s_delayed_last_in_stage_2_out <= s_delayed_last_in_stage_1_out;
+
+                s_data_in_stage_1_out <= SD_AXIS_TDATA;
+                s_mul_result_stage_2_out <=  (31 downto C_DATA_WIDTH*2 => '0') &
+                                             std_logic_vector(unsigned(s_data_in_stage_1_out(C_DATA_WIDTH*2-1 downto C_DATA_WIDTH)) *
+                                                              unsigned(s_data_in_stage_1_out(C_DATA_WIDTH-1 downto 0)));
+
+                s_valid_in_stage_1_out <= SD_AXIS_TVALID; 
+                s_valid_in_stage_2_out <= s_valid_in_stage_1_out; 
+
+
+                s_accumulator_reg_out <= s_adder_out;
+            end if;
+        end if;
+    end process;
+
 end architecture behavioral;
+

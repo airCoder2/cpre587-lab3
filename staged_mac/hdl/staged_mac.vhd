@@ -68,23 +68,21 @@ architecture behavioral of staged_mac is
 
     -- MY SIGNALS: 
     signal s_accumulator_reg_out : std_logic_vector(31 downto 0);
-    signal s_master_valid_out: std_logic;
+    signal s_delayed_last_in: std_logic;
 
     signal s_adder_operand_a : std_logic_vector(31 downto 0);
     signal s_adder_operand_b : std_logic_vector(31 downto 0);
     signal s_adder_out       : std_logic_vector(31 downto 0);
 
 
-
 begin
-
     -- Assignments
     MO_AXIS_TDATA  <= s_accumulator_reg_out; -- accumulator's reg is the output data
-    MO_AXIS_TVALID <= s_master_valid_out;
+    MO_AXIS_TVALID <= s_delayed_last_in;
     -- Keep accumulating until accumulate data is valid (completed accumulation) and the slave is not ready to consume
-    SD_AXIS_TREADY <= not s_master_valid_out or MO_AXIS_TREADY;
+    SD_AXIS_TREADY <= not s_delayed_last_in or MO_AXIS_TREADY;
 
-    s_adder_operand_a <= s_accumulator_reg_out when (s_master_valid_out = '0') else (others => '0'); 
+    s_adder_operand_a <= s_accumulator_reg_out when (s_delayed_last_in = '0') else (others => '0'); 
 
     s_adder_operand_b <= (31 downto C_DATA_WIDTH*2 => '0') &
                          std_logic_vector(unsigned(SD_AXIS_TDATA(C_DATA_WIDTH*2-1 downto C_DATA_WIDTH)) * unsigned(SD_AXIS_TDATA(C_DATA_WIDTH-1 downto 0)))
@@ -95,33 +93,18 @@ begin
 	
 	-- Debug Signals
     mac_debug <= x"00000000";  -- Double checking sanity
-    
-
 
     process(ACLK) is
     begin
         if rising_edge(ACLK) then
             if ARESETN = '0' then
-                s_master_valid_out <= '0';
+                s_delayed_last_in <= '0';
+                s_accumulator_reg_out <= (others => '0'); -- set the accumulator to 0
             else
-                s_master_valid_out <= SD_AXIS_TLAST;
+                s_delayed_last_in <= SD_AXIS_TLAST;
+                s_accumulator_reg_out <= s_adder_out;
             end if;
         end if;
     end process;
 
-   
-   process (ACLK) is
-   begin 
-    if rising_edge(ACLK) then  -- Rising Edge
-
-      -- Reset values if reset is low
-      if ARESETN = '0' then  -- Reset
-        s_accumulator_reg_out <= (others => '0'); -- set the accumulator to 0
-      else
-        s_accumulator_reg_out <= s_adder_out;
-      end if;  -- Reset
-
-    end if;  -- Rising Edge
-   end process;
 end architecture behavioral;
-
