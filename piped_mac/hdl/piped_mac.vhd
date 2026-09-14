@@ -80,6 +80,8 @@ architecture behavioral of piped_mac is
     signal s_adder_operand_b : std_logic_vector(31 downto 0);
     signal s_adder_out       : std_logic_vector(31 downto 0);
 
+    signal s_ready_out : std_logic;
+
 
 begin
 
@@ -87,7 +89,8 @@ begin
     MO_AXIS_TDATA  <= s_accumulator_reg_out; -- accumulator's reg is the output data
     MO_AXIS_TVALID <= s_delayed_last_in_stage_2_out;
     -- Keep accumulating until accumulate data is valid (completed accumulation) and the slave is not ready to consume
-    SD_AXIS_TREADY <= not s_delayed_last_in_stage_2_out or MO_AXIS_TREADY;
+    s_ready_out <= not s_delayed_last_in_stage_2_out or MO_AXIS_TREADY;
+    SD_AXIS_TREADY <= s_ready_out;
 
     s_adder_operand_a <= s_accumulator_reg_out when (s_delayed_last_in_stage_2_out = '0') else (others => '0'); 
 
@@ -116,10 +119,14 @@ begin
                 s_valid_in_stage_2_out <= '0';
 
                 s_accumulator_reg_out  <= (others => '0');
-    
-            else
+
+            -- basically only update all the registers only if we are ready to process more data
+            -- (for example if previous accumulation was the last, but slave is not ready to process it
+            -- then we don't want to overwrite the value accumulator is holding on before slave can consume it)
+            -- we also freze every other register to hold on to their value and not move forward
+            elsif s_ready_out = '1' then
                 s_last_in_stage_1_out <= SD_AXIS_TLAST;
-                s_delayed_last_in_stage_1_out <= s_last_in_stage_1_out;
+                s_delayed_last_in_stage_1_out <= s_last_in_stage_1_out and s_valid_in_stage_1_out;
                 s_delayed_last_in_stage_2_out <= s_delayed_last_in_stage_1_out;
 
                 s_data_in_stage_1_out <= SD_AXIS_TDATA;
@@ -129,7 +136,6 @@ begin
 
                 s_valid_in_stage_1_out <= SD_AXIS_TVALID; 
                 s_valid_in_stage_2_out <= s_valid_in_stage_1_out; 
-
 
                 s_accumulator_reg_out <= s_adder_out;
             end if;
