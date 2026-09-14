@@ -83,8 +83,11 @@ architecture behavioral of staged_mac is
 
 begin
     -- Assignments
+
     MO_AXIS_TDATA  <= s_accumulator_reg_out; -- accumulator's reg_out is the output data
     MO_AXIS_TVALID <= s_delayed_last_in;
+    MO_AXIS_TLAST  <= s_delayed_last_in;
+
     -- Keep accumulating until accumulate data is valid (completed accumulation) and the slave is not ready to consume
     s_ready_out <= not s_delayed_last_in or MO_AXIS_TREADY;
     SD_AXIS_TREADY <= s_ready_out;
