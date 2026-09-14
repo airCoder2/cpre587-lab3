@@ -64,9 +64,13 @@ architecture behavioral of staged_mac is
     signal mac_debug : std_logic_vector(31 downto 0);
 
     -- Intended behaviour of my circuit
-    -- 1. When last is detected, Accumulate register, which is 32 bits should be reset
+    -- 1. When last is detected, Accumulate reg_outister, which is 32 bits should be reset
 
     -- MY SIGNALS: 
+    signal s_last_in_reg_out : std_logic;
+    signal s_data_in_reg_out : std_logic_vector(C_DATA_WIDTH*2-1 downto 0);
+    signal s_valid_in_reg_out: std_logic;
+
     signal s_accumulator_reg_out : std_logic_vector(31 downto 0);
     signal s_delayed_last_in: std_logic;
 
@@ -74,19 +78,22 @@ architecture behavioral of staged_mac is
     signal s_adder_operand_b : std_logic_vector(31 downto 0);
     signal s_adder_out       : std_logic_vector(31 downto 0);
 
+    signal s_ready_out : std_logic;
+
 
 begin
     -- Assignments
-    MO_AXIS_TDATA  <= s_accumulator_reg_out; -- accumulator's reg is the output data
+    MO_AXIS_TDATA  <= s_accumulator_reg_out; -- accumulator's reg_out is the output data
     MO_AXIS_TVALID <= s_delayed_last_in;
     -- Keep accumulating until accumulate data is valid (completed accumulation) and the slave is not ready to consume
-    SD_AXIS_TREADY <= not s_delayed_last_in or MO_AXIS_TREADY;
+    s_ready_out <= not s_delayed_last_in or MO_AXIS_TREADY;
+    SD_AXIS_TREADY <= s_ready_out;
 
     s_adder_operand_a <= s_accumulator_reg_out when (s_delayed_last_in = '0') else (others => '0'); 
 
     s_adder_operand_b <= (31 downto C_DATA_WIDTH*2 => '0') &
-                         std_logic_vector(unsigned(SD_AXIS_TDATA(C_DATA_WIDTH*2-1 downto C_DATA_WIDTH)) * unsigned(SD_AXIS_TDATA(C_DATA_WIDTH-1 downto 0)))
-                         when (SD_AXIS_TVALID = '1') else (others => '0'); 
+                         std_logic_vector(unsigned(s_data_in_reg_out(C_DATA_WIDTH*2-1 downto C_DATA_WIDTH)) * unsigned(s_data_in_reg_out(C_DATA_WIDTH-1 downto 0)))
+                         when (s_valid_in_reg_out = '1') else (others => '0'); 
 
     s_adder_out <= std_logic_vector(unsigned(s_adder_operand_a) + unsigned(s_adder_operand_b));
 
@@ -98,10 +105,21 @@ begin
     begin
         if rising_edge(ACLK) then
             if ARESETN = '0' then
+
                 s_delayed_last_in <= '0';
+                s_last_in_reg_out <= '0';
+                s_valid_in_reg_out <= '0';
+
+                s_data_in_reg_out <= (others => '0');
                 s_accumulator_reg_out <= (others => '0'); -- set the accumulator to 0
-            else
-                s_delayed_last_in <= SD_AXIS_TLAST;
+
+            elsif s_ready_out = '1' then
+                s_last_in_reg_out <= SD_AXIS_TLAST;
+                s_delayed_last_in <= s_last_in_reg_out and s_valid_in_reg_out;
+
+                s_valid_in_reg_out <= SD_AXIS_TVALID;
+                s_data_in_reg_out <= SD_AXIS_TDATA;
+
                 s_accumulator_reg_out <= s_adder_out;
             end if;
         end if;
