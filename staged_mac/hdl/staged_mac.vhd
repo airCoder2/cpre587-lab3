@@ -70,6 +70,7 @@ architecture behavioral of staged_mac is
     signal s_last_in_reg_out : std_logic;
     signal s_data_in_reg_out : std_logic_vector(C_DATA_WIDTH*2-1 downto 0);
     signal s_valid_in_reg_out: std_logic;
+    signal s_user_in_reg_out: std_logic;
 
     signal s_accumulator_reg_out : std_logic_vector(31 downto 0);
     signal s_delayed_last_in: std_logic;
@@ -119,8 +120,9 @@ begin
 
                 s_valid_in_reg_out <= SD_AXIS_TVALID;
                 s_data_in_reg_out <= SD_AXIS_TDATA;
+                s_user_in_reg_out <= SD_AXIS_TUSER;
 
-                s_accumulator_reg_out <= s_adder_out;
+                s_accumulator_reg_out <= s_adder_out when (s_user_in_reg_out = '0') else s_data_in_reg_out;
             end if;
         end if;
     end process;
