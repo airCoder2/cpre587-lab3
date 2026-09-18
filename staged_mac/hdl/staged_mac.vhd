@@ -122,7 +122,11 @@ begin
                 s_data_in_reg_out <= SD_AXIS_TDATA;
                 s_user_in_reg_out <= SD_AXIS_TUSER;
 
-                s_accumulator_reg_out <= s_adder_out when (s_user_in_reg_out = '0') else s_data_in_reg_out;
+		if (s_user_in_reg_out = '0') then
+                	s_accumulator_reg_out <= s_adder_out;
+		else
+			s_accumulator_reg_out <= x"0000" & s_data_in_reg_out;
+		end if;
             end if;
         end if;
     end process;
