@@ -55,13 +55,8 @@ end staged_mac;
 architecture behavioral of staged_mac is
     -- Internal Signals
 	
-	
-	-- Mac state
-    type STATE_TYPE is (WAIT_FOR_VALUES);
-    signal state : STATE_TYPE;
 
-	-- Debug signals, make sure we aren't going crazy
-    signal mac_debug : std_logic_vector(31 downto 0);
+
 
     -- Intended behaviour of my circuit
     -- 1. When last is detected, Accumulate reg_outister, which is 32 bits should be reset
@@ -70,17 +65,21 @@ architecture behavioral of staged_mac is
     signal s_last_in_reg_out : std_logic;
     signal s_data_in_reg_out : std_logic_vector(C_DATA_WIDTH*2-1 downto 0);
     signal s_valid_in_reg_out: std_logic;
-    signal s_user_in_reg_out: std_logic;
+    signal s_user_in_reg_out:  std_logic;
 
     signal s_accumulator_reg_out : std_logic_vector(31 downto 0);
     signal s_delayed_last_in: std_logic;
 
-    signal s_adder_operand_a : std_logic_vector(31 downto 0);
+    -- signal s_adder_operand_a : std_logic_vector(31 downto 0);
     signal s_adder_operand_b : std_logic_vector(31 downto 0);
     signal s_adder_out       : std_logic_vector(31 downto 0);
+    signal s_mult_out        : std_logic_vector(C_DATA_WIDTH*2-1 downto 0);
 
     signal s_ready_out : std_logic;
 
+    attribute use_dsp : string;
+    attribute use_dsp of s_mult_out  : signal is "yes";
+--    attribute use_dsp of s_adder_out : signal is "yes";
 
 begin
     -- Assignments
@@ -93,17 +92,20 @@ begin
     s_ready_out <= not s_delayed_last_in or MO_AXIS_TREADY;
     SD_AXIS_TREADY <= s_ready_out;
 
-    s_adder_operand_a <= s_accumulator_reg_out when (s_delayed_last_in = '0') else (others => '0'); 
+    -- if last was 1, then don't add the old value of accumulate again
+    --s_adder_operand_a <= s_accumulator_reg_out when (s_delayed_last_in = '0') else (others => '0'); 
+    
+    -- multiply (15:8) and (7:0) of incoming data, if data is valid
+    s_mult_out <= std_logic_vector(unsigned(s_data_in_reg_out(C_DATA_WIDTH*2-1 downto C_DATA_WIDTH)) * unsigned(s_data_in_reg_out(C_DATA_WIDTH-1 downto 0)));
 
-    s_adder_operand_b <= (31 downto C_DATA_WIDTH*2 => '0') &
-                         std_logic_vector(unsigned(s_data_in_reg_out(C_DATA_WIDTH*2-1 downto C_DATA_WIDTH)) * unsigned(s_data_in_reg_out(C_DATA_WIDTH-1 downto 0)))
+    s_adder_operand_b <= (31 downto C_DATA_WIDTH*2 => '0') & s_mult_out
                          when (s_valid_in_reg_out = '1') else (others => '0'); 
-
-    s_adder_out <= std_logic_vector(unsigned(s_adder_operand_a) + unsigned(s_adder_operand_b));
+    
+    -- This should work if we can guarantee that we always load the bias one clock cycle after tlast
+     s_adder_out <= std_logic_vector(unsigned(s_accumulator_reg_out) + unsigned(s_adder_operand_b));
+    -- s_adder_out <= std_logic_vector(unsigned(s_adder_operand_a) + unsigned(s_adder_operand_b));
 
 	
-	-- Debug Signals
-    mac_debug <= x"00000000";  -- Double checking sanity
 
     process(ACLK) is
     begin
@@ -113,6 +115,7 @@ begin
                 s_delayed_last_in <= '0';
                 s_last_in_reg_out <= '0';
                 s_valid_in_reg_out <= '0';
+                s_user_in_reg_out <= '0';
 
                 s_data_in_reg_out <= (others => '0');
                 s_accumulator_reg_out <= (others => '0'); -- set the accumulator to 0
@@ -124,12 +127,17 @@ begin
                 s_valid_in_reg_out <= SD_AXIS_TVALID;
                 s_data_in_reg_out <= SD_AXIS_TDATA;
                 s_user_in_reg_out <= SD_AXIS_TUSER;
+                
+                -- if user = 1 and data is valid, then load the bias to accumulator register
+                -- else, put adder out to accumulator which already takes valid into account and adds 0 to itself
+                -- if ((s_user_in_reg_out and s_valid_in_reg_out) = '1') then
+                -- if (s_user_in_reg_out = '1' and s_valid_in_reg_out = '1') then
+                if (s_user_in_reg_out = '1') then
+                    s_accumulator_reg_out <= (31 downto 8 => '0') & s_data_in_reg_out(7 downto 0);
+                else
+                    s_accumulator_reg_out <= s_adder_out;
+                end if;
 
-		if (s_user_in_reg_out = '0') then
-                	s_accumulator_reg_out <= s_adder_out;
-		else
-			s_accumulator_reg_out <= x"0000" & s_data_in_reg_out;
-		end if;
             end if;
         end if;
     end process;

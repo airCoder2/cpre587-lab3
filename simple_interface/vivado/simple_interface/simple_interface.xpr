@@ -82,8 +82,8 @@
           <Attr Name="UsedIn" Val="implementation"/>
           <Attr Name="UsedIn" Val="simulation"/>
         </FileInfo>
-        <CompFileExtendedInfo CompFileName="staged_mac_bd.bd" FileRelPathName="ip/staged_mac_bd_axis_subset_converter_0_0/staged_mac_bd_axis_subset_converter_0_0.xci">
-          <Proxy FileSetName="staged_mac_bd_axis_subset_converter_0_0"/>
+        <CompFileExtendedInfo CompFileName="staged_mac_bd.bd" FileRelPathName="ip/staged_mac_bd_processing_system7_0_0/staged_mac_bd_processing_system7_0_0.xci">
+          <Proxy FileSetName="staged_mac_bd_processing_system7_0_0"/>
         </CompFileExtendedInfo>
         <CompFileExtendedInfo CompFileName="staged_mac_bd.bd" FileRelPathName="ip/staged_mac_bd_axi_fifo_mm_s_0_0/staged_mac_bd_axi_fifo_mm_s_0_0.xci">
           <Proxy FileSetName="staged_mac_bd_axi_fifo_mm_s_0_0"/>
@@ -91,11 +91,11 @@
         <CompFileExtendedInfo CompFileName="staged_mac_bd.bd" FileRelPathName="ip/staged_mac_bd_staged_mac_0_1/staged_mac_bd_staged_mac_0_1.xci">
           <Proxy FileSetName="staged_mac_bd_staged_mac_0_1"/>
         </CompFileExtendedInfo>
+        <CompFileExtendedInfo CompFileName="staged_mac_bd.bd" FileRelPathName="ip/staged_mac_bd_axis_subset_converter_0_0/staged_mac_bd_axis_subset_converter_0_0.xci">
+          <Proxy FileSetName="staged_mac_bd_axis_subset_converter_0_0"/>
+        </CompFileExtendedInfo>
         <CompFileExtendedInfo CompFileName="staged_mac_bd.bd" FileRelPathName="ip/staged_mac_bd_rst_ps7_0_100M_0/staged_mac_bd_rst_ps7_0_100M_0.xci">
           <Proxy FileSetName="staged_mac_bd_rst_ps7_0_100M_0"/>
-        </CompFileExtendedInfo>
-        <CompFileExtendedInfo CompFileName="staged_mac_bd.bd" FileRelPathName="ip/staged_mac_bd_processing_system7_0_0/staged_mac_bd_processing_system7_0_0.xci">
-          <Proxy FileSetName="staged_mac_bd_processing_system7_0_0"/>
         </CompFileExtendedInfo>
       </File>
       <File Path="$PSRCDIR/sources_1/bd/staged_mac_bd/hdl/staged_mac_bd_wrapper.v">

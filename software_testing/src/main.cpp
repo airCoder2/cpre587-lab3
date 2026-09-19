@@ -11,17 +11,24 @@ void run_tests(){
     // These are necessary for interfacing with your hardware
     // But do note, these cannot be found when compiling for the Lab computer
     // Send all data here, each write is sending 32-bits concatenated index and width
-    Xil_Out32(XPAR_AXI_FIFO_0_BASEADDR + XLLF_TDFD_OFFSET, 0x0101);
-    Xil_Out32(XPAR_AXI_FIFO_0_BASEADDR + XLLF_TDFD_OFFSET, 0x0101);
-    Xil_Out32(XPAR_AXI_FIFO_0_BASEADDR + XLLF_TDFD_OFFSET, 0x0101);
-    Xil_Out32(XPAR_AXI_FIFO_0_BASEADDR + XLLF_TDFD_OFFSET, 0x0101);
-    Xil_Out32(XPAR_AXI_FIFO_0_BASEADDR + XLLF_TDFD_OFFSET, 0x0101);
-    Xil_Out32(XPAR_AXI_FIFO_0_BASEADDR + XLLF_TDFD_OFFSET, 0x0101);
-    Xil_Out32(XPAR_AXI_FIFO_0_BASEADDR + XLLF_TDFD_OFFSET, 0x0101);
-    Xil_Out32(XPAR_AXI_FIFO_0_BASEADDR + XLLF_TDFD_OFFSET, 0x0101);
-    // Set transmit length BEFORE writing the last word of the packet to the fifo
-    // to the total number of BYTES sent via the FIFO
-    Xil_Out32(XPAR_AXI_FIFO_0_BASEADDR + XLLF_TLF_OFFSET, 8*4);
+    //
+    
+    Xil_Out32(XPAR_AXI_FIFO_0_BASEADDR + 0x38, 0x1);
+    Xil_Out32(XPAR_AXI_FIFO_0_BASEADDR + XLLF_TDFD_OFFSET, 0x0064);
+    Xil_Out32(XPAR_AXI_FIFO_0_BASEADDR + XLLF_TLF_OFFSET, 4);
+
+    //Xil_Out32(XPAR_AXI_FIFO_0_BASEADDR + 0x38, 0x0);
+    //Xil_Out32(XPAR_AXI_FIFO_0_BASEADDR + XLLF_TDFD_OFFSET, 0x0101);
+    //Xil_Out32(XPAR_AXI_FIFO_0_BASEADDR + XLLF_TDFD_OFFSET, 0x0101);
+    //Xil_Out32(XPAR_AXI_FIFO_0_BASEADDR + XLLF_TDFD_OFFSET, 0x0101);
+    //Xil_Out32(XPAR_AXI_FIFO_0_BASEADDR + XLLF_TDFD_OFFSET, 0x0101);
+    //Xil_Out32(XPAR_AXI_FIFO_0_BASEADDR + XLLF_TDFD_OFFSET, 0x0101);
+    //Xil_Out32(XPAR_AXI_FIFO_0_BASEADDR + XLLF_TDFD_OFFSET, 0x0101);
+    //Xil_Out32(XPAR_AXI_FIFO_0_BASEADDR + XLLF_TDFD_OFFSET, 0x0101);
+    //Xil_Out32(XPAR_AXI_FIFO_0_BASEADDR + XLLF_TDFD_OFFSET, 0x0101);
+    //// Set transmit length BEFORE writing the last word of the packet to the fifo
+    //// to the total number of BYTES sent via the FIFO
+    //Xil_Out32(XPAR_AXI_FIFO_0_BASEADDR + XLLF_TLF_OFFSET, 8*4);
 
     // To receive a packet:
     // Wait until we start receiving a packet (RX FIFO Occupancy is nonzero)
