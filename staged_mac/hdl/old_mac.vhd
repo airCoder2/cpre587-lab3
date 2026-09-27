@@ -53,22 +53,15 @@ end staged_mac;
 
 
 architecture behavioral of staged_mac is
-    -- Internal Signals
-
-
-    -- Intended behaviour of my circuit
-    -- 1. When last is detected, Accumulate reg_outister, which is 32 bits should be reset
 
     -- MY SIGNALS: 
     signal s_last_in_reg_out : std_logic;
     signal s_data_in_reg_out : std_logic_vector(C_DATA_WIDTH*2-1 downto 0);
     signal s_valid_in_reg_out: std_logic;
-    signal s_user_in_reg_out:  std_logic;
 
     signal s_accumulator_reg_out : std_logic_vector(31 downto 0);
     signal s_delayed_last_in: std_logic;
 
-    -- signal s_adder_operand_a : std_logic_vector(31 downto 0);
     signal s_adder_operand_b : std_logic_vector(31 downto 0);
     signal s_adder_out       : std_logic_vector(31 downto 0);
     signal s_mult_out        : std_logic_vector(C_DATA_WIDTH*2-1 downto 0);
@@ -116,8 +109,7 @@ begin
                 s_last_in_reg_out <= '0';
                 s_delayed_last_in <= '0';
                 s_valid_in_reg_out <= '0';
-                s_user_in_reg_out <= '0';
-                s_expected_bias   <= '1';
+                s_expected_bias   <= '1'; -- the first valid transaction should be the bias, so set it to 1 on reset
 
                 s_data_in_reg_out <= (others => '0');
                 s_accumulator_reg_out <= (others => '0'); -- set the accumulator to 0
@@ -128,12 +120,15 @@ begin
 
                 s_valid_in_reg_out <= SD_AXIS_TVALID;
                 s_data_in_reg_out <= SD_AXIS_TDATA;
-                s_user_in_reg_out <= SD_AXIS_TUSER;
 
+                -- if data is valid, then set last_state to expected bias.
+                -- This way, we know next valid data is going to be bias
                 if (s_valid_in_reg_out = '1') then
                     s_expected_bias <= s_last_in_reg_out;
                 end if;
                 
+                -- if expected_bias was set to 1, and data is valid, then load bias.
+                -- Otherwise store adder_out 
                 if (s_expected_bias = '1' and s_valid_in_reg_out = '1') then
                     s_accumulator_reg_out <= (31 downto 16 => '0') & s_data_in_reg_out(15 downto 0);
                 else

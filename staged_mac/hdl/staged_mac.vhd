@@ -80,38 +80,45 @@ begin
       else
         case state is  -- State
             when LOAD_BIAS =>
-                -- if data is valid, and slave is ready to process new data
+
+                -- if there currently is NOT a value in accumulate register, or if slave is ready to pull the available data
+                -- then clear the valid bit for the next cycle, so after data is pulled out we go valid = 0 
+                if s_ready = '1' then
+                    s_valid <= '0';
+                end if;
+
+                -- if data_in is valid, and slave is ready to process new data
                 if SD_AXIS_TVALID = '1' and s_ready = '1' then
+                    -- set next state to ACCUMULATE by defualt
                     state <= ACCUMULATE;
 
-                    -- loading the bias, the first valid data
+                    -- load the bias to the accumulate register
                     s_accumulator <= (31 downto C_DATA_WIDTH*2 => '0') & SD_AXIS_TDATA;
 
+                    -- if bias itself was the last data, then set valid = 1, and change state to LOAD_BIAS
                     if SD_AXIS_TLAST = '1' then
                         s_valid <= '1';
                         state <= LOAD_BIAS;
                     end if;
 
                 -- clear the s_valid signal to output if output was taken
-                if s_ready = '1' then
-                    s_valid <= '0';
                 end if;
-                end if;
+
 			
             when ACCUMULATE =>
-                -- is data is valid, then add it to what is already there (either bias or previous accumulations)
+                -- if data_in is valid, and slave is ready to process new data
                 if SD_AXIS_TVALID = '1' and s_ready = '1' then
+                    -- add new valid data to total sum
 		            s_accumulator <= std_logic_vector(unsigned(s_accumulator) + unsigned((31 downto C_DATA_WIDTH*2 => '0') & 
                                      std_logic_vector(unsigned(SD_AXIS_TDATA(C_DATA_WIDTH*2-1 downto C_DATA_WIDTH)) * unsigned(SD_AXIS_TDATA(C_DATA_WIDTH-1 downto 0)))));
 
-                    -- if tlast is 1 then set valid_out to 1
+                    -- if tlast is 1 then set valid = 1 and change state to LOAD_BIAS
                     if SD_AXIS_TLAST = '1' then
                         s_valid <= '1';
                         state <= LOAD_BIAS;
                     end if;
                 end if;
 
-                    
 			-- Other stages go here	
 			
             when others =>
