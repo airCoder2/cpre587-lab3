@@ -6,16 +6,53 @@
 #include "xllfifo_hw.h" 
 #endif
 
+constexpr uint32_t RLR_PARTIAL = 0x80000000U;
+const uintptr_t base = XPAR_AXI_FIFO_0_BASEADDR;
+
+// Reads one full packet (handles cut-through partials too)
+static void read_packet(uintptr_t base) {
+    while (true) {
+        while (Xil_In32(base + XLLF_RDFO_OFFSET) == 0);   // wait for data
+
+        uint32_t rlr   = Xil_In32(base + XLLF_RLF_OFFSET);
+        uint32_t bytes = rlr & 0x7FFFFFFFU;
+
+        for (uint32_t i = 0; i < bytes; i += 4) {
+            int32_t recv_data = (int32_t)Xil_In32(base + XLLF_RDFD_OFFSET);
+            std::cout << "recv_data = " << recv_data << '\n';
+        }
+
+        if (!(rlr & RLR_PARTIAL)) break;   // packet complete
+    }
+}
+
 void run_tests(){
     // Use these imports to access the Xilinx library functions and definitions
     // These are necessary for interfacing with your hardware
     // But do note, these cannot be found when compiling for the Lab computer
     // Send all data here, each write is sending 32-bits concatenated index and width
     //
+    // Xil_Out32(XPAR_AXI_FIFO_0_BASEADDR + 0x38, 0xF);
     
-    Xil_Out32(XPAR_AXI_FIFO_0_BASEADDR + 0x38, 0x1);
-    Xil_Out32(XPAR_AXI_FIFO_0_BASEADDR + XLLF_TDFD_OFFSET, 0x0064);
-    Xil_Out32(XPAR_AXI_FIFO_0_BASEADDR + XLLF_TLF_OFFSET, 4);
+    // first one is the bias
+    Xil_Out32(XPAR_AXI_FIFO_0_BASEADDR + XLLF_TDFD_OFFSET, 0x0064); // load 100
+    Xil_Out32(XPAR_AXI_FIFO_0_BASEADDR + XLLF_TDFD_OFFSET, 0x010A); 
+    Xil_Out32(XPAR_AXI_FIFO_0_BASEADDR + XLLF_TDFD_OFFSET, 0x020A); 
+    Xil_Out32(XPAR_AXI_FIFO_0_BASEADDR + XLLF_TDFD_OFFSET, 0x030A); 
+    Xil_Out32(XPAR_AXI_FIFO_0_BASEADDR + XLLF_TDFD_OFFSET, 0x040A); 
+    Xil_Out32(XPAR_AXI_FIFO_0_BASEADDR + XLLF_TDFD_OFFSET, 0x050A); 
+    Xil_Out32(XPAR_AXI_FIFO_0_BASEADDR + XLLF_TDFD_OFFSET, 0x060A); 
+    Xil_Out32(XPAR_AXI_FIFO_0_BASEADDR + XLLF_TDFD_OFFSET, 0x070A); 
+    Xil_Out32(XPAR_AXI_FIFO_0_BASEADDR + XLLF_TDFD_OFFSET, 0x080A); 
+    Xil_Out32(XPAR_AXI_FIFO_0_BASEADDR + XLLF_TLF_OFFSET, 4 * 9);
+
+    Xil_Out32(XPAR_AXI_FIFO_0_BASEADDR + XLLF_TDFD_OFFSET, 0x0060); // load 96
+    Xil_Out32(XPAR_AXI_FIFO_0_BASEADDR + XLLF_TDFD_OFFSET, 0x0109); 
+    Xil_Out32(XPAR_AXI_FIFO_0_BASEADDR + XLLF_TLF_OFFSET, 8);
+
+    Xil_Out32(XPAR_AXI_FIFO_0_BASEADDR + XLLF_TDFD_OFFSET, 0x000A); // load 10
+    Xil_Out32(XPAR_AXI_FIFO_0_BASEADDR + XLLF_TDFD_OFFSET, 0x0104); 
+    Xil_Out32(XPAR_AXI_FIFO_0_BASEADDR + XLLF_TLF_OFFSET, 8);
 
     //Xil_Out32(XPAR_AXI_FIFO_0_BASEADDR + 0x38, 0x0);
     //Xil_Out32(XPAR_AXI_FIFO_0_BASEADDR + XLLF_TDFD_OFFSET, 0x0101);
@@ -32,25 +69,11 @@ void run_tests(){
 
     // To receive a packet:
     // Wait until we start receiving a packet (RX FIFO Occupancy is nonzero)
-    while (Xil_In32(XPAR_AXI_FIFO_0_BASEADDR + XLLF_RDFO_OFFSET) == 0);
-
-    while (true) {
-        // Then read how many words are available to us right now.
-        // Bit 31 = 1 when this is all the words in the current packet
-        // Bit 31 = 0 when this is how many words are available,
-        // but no TLAST has been sent to us yet
-        uint32_t read_len = Xil_In32(XPAR_AXI_FIFO_0_BASEADDR + XLLF_RLF_OFFSET);
-        // Read out every word we have access to right now
-
-        for (int i = 0; i < (read_len & 0x7FFFFFFFUL); i+=4) {
-            int32_t recv_data = (int32_t)Xil_In32(XPAR_AXI_FIFO_0_BASEADDR + XLLF_RDFD_OFFSET);
-            std::cout << "recv_data = " << recv_data << "\n" << std::endl;
-        }
-
-        if (!(read_len & (1 << 31))) {
-            break; // This is all the data in this packet, done
-        }
-        // There is more in this data packet, wait for more to come in
+    //
+    const int NUM_RESULTS = 3;
+    for (int p = 0; p < NUM_RESULTS; ++p) {
+        std::cout << "result " << p << ":\n";
+        read_packet(base);
     }
 }
 

@@ -45,6 +45,7 @@ entity staged_mac is
 		MO_AXIS_TID     : out   std_logic_vector(7 downto 0)
     );
 
+-- ME: just letting the synthesis tool know that ACLK is clock, so it can route it diffrently
 attribute SIGIS : string; 
 attribute SIGIS of ACLK : signal is "Clk"; 
 
@@ -52,90 +53,90 @@ end staged_mac;
 
 
 architecture behavioral of staged_mac is
-    -- Internal Signals
-	
-	
-	-- Mac state
-    type STATE_TYPE is (LOAD_BIAS, ACCUMULATE);
-    signal state : STATE_TYPE;
-    
-    signal s_accumulator: std_logic_vector(31 downto 0);
-    signal s_valid      : std_logic;
-    signal s_ready      : std_logic := '0';
-	
+
+    -- MY SIGNALS: 
+    signal s_last_in_reg_out : std_logic;
+    signal s_data_in_reg_out : std_logic_vector(C_DATA_WIDTH*2-1 downto 0);
+    signal s_valid_in_reg_out: std_logic;
+
+    signal s_accumulator_reg_out : std_logic_vector(31 downto 0);
+    signal s_delayed_last_in: std_logic;
+
+    signal s_adder_operand_b : std_logic_vector(31 downto 0);
+    signal s_adder_out       : std_logic_vector(31 downto 0);
+    signal s_mult_out        : std_logic_vector(C_DATA_WIDTH*2-1 downto 0);
+
+    signal s_ready_out : std_logic;
+    signal s_expected_bias : std_logic;
+
+    attribute use_dsp : string;
+    attribute use_dsp of s_mult_out  : signal is "yes";
+--    attribute use_dsp of s_adder_out : signal is "yes";
+
+
 begin
-	
-	-- Debug Signals
-   
-   process (ACLK) is
-   begin 
-    if rising_edge(ACLK) then  -- Rising Edge
+    -- Assignments
 
-      -- Reset values if reset is low
-      if ARESETN = '0' then  -- Reset
-        state   <= LOAD_BIAS;
-        s_accumulator <= (others => '0');
-        s_valid <= '0';
+    MO_AXIS_TDATA  <= s_accumulator_reg_out; -- accumulator's reg_out is the output data
+    MO_AXIS_TVALID <= s_delayed_last_in;
+    MO_AXIS_TLAST  <= s_delayed_last_in;  -- just never assign last keep the loop up
 
-      else
-        case state is  -- State
-            when LOAD_BIAS =>
+    -- Keep accumulating until accumulate data is valid (completed accumulation) and the slave is not ready to consume
+    s_ready_out <= not s_delayed_last_in or MO_AXIS_TREADY;
+    SD_AXIS_TREADY <= s_ready_out;
 
-                -- if there currently is NOT a value in accumulate register, or if slave is ready to pull the available data
-                -- then clear the valid bit for the next cycle, so after data is pulled out we go valid = 0 
-                if s_ready = '1' then
-                    s_valid <= '0';
+    -- if last was 1, then don't add the old value of accumulate again
+    --s_adder_operand_a <= s_accumulator_reg_out when (s_delayed_last_in = '0') else (others => '0'); 
+    
+    -- multiply (15:8) and (7:0) of incoming data, if data is valid
+    s_mult_out <= std_logic_vector(unsigned(s_data_in_reg_out(C_DATA_WIDTH*2-1 downto C_DATA_WIDTH)) * unsigned(s_data_in_reg_out(C_DATA_WIDTH-1 downto 0)));
+
+    s_adder_operand_b <= (31 downto C_DATA_WIDTH*2 => '0') & s_mult_out
+                         when (s_valid_in_reg_out = '1') else (others => '0'); 
+    
+    -- This should work if we can guarantee that we always load the bias one clock cycle after tlast
+     s_adder_out <= std_logic_vector(unsigned(s_accumulator_reg_out) + unsigned(s_adder_operand_b));
+    -- s_adder_out <= std_logic_vector(unsigned(s_adder_operand_a) + unsigned(s_adder_operand_b));
+
+
+    
+
+    process(ACLK) is
+    begin
+        if rising_edge(ACLK) then
+            if ARESETN = '0' then
+
+                s_last_in_reg_out <= '0';
+                s_delayed_last_in <= '0';
+                s_valid_in_reg_out <= '0';
+                s_expected_bias   <= '1'; -- the first valid transaction should be the bias, so set it to 1 on reset
+
+                s_data_in_reg_out <= (others => '0');
+                s_accumulator_reg_out <= (others => '0'); -- set the accumulator to 0
+
+            elsif s_ready_out = '1' then
+                s_last_in_reg_out <= SD_AXIS_TLAST;
+                s_delayed_last_in <= s_last_in_reg_out and s_valid_in_reg_out;
+
+                s_valid_in_reg_out <= SD_AXIS_TVALID;
+                s_data_in_reg_out <= SD_AXIS_TDATA;
+
+                -- if data is valid, then set last_state to expected bias.
+                -- This way, we know next valid data is going to be bias
+                if (s_valid_in_reg_out = '1') then
+                    s_expected_bias <= s_last_in_reg_out;
+                end if;
+                
+                -- if expected_bias was set to 1, and data is valid, then load bias.
+                -- Otherwise store adder_out 
+                if (s_expected_bias = '1' and s_valid_in_reg_out = '1') then
+                    s_accumulator_reg_out <= (31 downto 16 => '0') & s_data_in_reg_out(15 downto 0);
+                else
+                    s_accumulator_reg_out <= s_adder_out;
                 end if;
 
-                -- if data_in is valid, and slave is ready to process new data
-                if SD_AXIS_TVALID = '1' and s_ready = '1' then
-                    -- set next state to ACCUMULATE by defualt
-                    state <= ACCUMULATE;
-
-                    -- load the bias to the accumulate register
-                    s_accumulator <= (31 downto C_DATA_WIDTH*2 => '0') & SD_AXIS_TDATA;
-
-                    -- if bias itself was the last data, then set valid = 1, and change state to LOAD_BIAS
-                    if SD_AXIS_TLAST = '1' then
-                        s_valid <= '1';
-                        state <= LOAD_BIAS;
-                    end if;
-
-                -- clear the s_valid signal to output if output was taken
-                end if;
-
-			
-            when ACCUMULATE =>
-                -- if data_in is valid, and slave is ready to process new data
-                if SD_AXIS_TVALID = '1' and s_ready = '1' then
-                    -- add new valid data to total sum
-		            s_accumulator <= std_logic_vector(unsigned(s_accumulator) + unsigned((31 downto C_DATA_WIDTH*2 => '0') & 
-                                     std_logic_vector(unsigned(SD_AXIS_TDATA(C_DATA_WIDTH*2-1 downto C_DATA_WIDTH)) * unsigned(SD_AXIS_TDATA(C_DATA_WIDTH-1 downto 0)))));
-
-                    -- if tlast is 1 then set valid = 1 and change state to LOAD_BIAS
-                    if SD_AXIS_TLAST = '1' then
-                        s_valid <= '1';
-                        state <= LOAD_BIAS;
-                    end if;
-                end if;
-
-			-- Other stages go here	
-			
-            when others =>
-                state <= LOAD_BIAS;
-                -- Not really important, this case should never happen
-                -- Needed for proper synthisis         
-        end case;  -- State
-      end if;  -- Reset
-
-    end if;  -- Rising Edge
-   end process;
-
-        s_ready         <= not s_valid or MO_AXIS_TREADY;
-		SD_AXIS_TREADY	<= s_ready;
-		MO_AXIS_TVALID	<= s_valid;
-		MO_AXIS_TLAST	<= s_valid;
-		MO_AXIS_TDATA	<= s_accumulator;
+            end if;
+        end if;
+    end process;
 
 end architecture behavioral;
-
