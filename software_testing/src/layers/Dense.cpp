@@ -9,6 +9,10 @@
 #include "Layer.h"
 #include "./config.h"
 
+#ifdef ZEDBOARD
+    #include "fifo_transaction.h"
+#endif
+
 namespace ML
 {
     // --- Begin Student Code ---
@@ -56,6 +60,83 @@ namespace ML
             output_before_activation.push_back(sum_plus_bias);
 
             sum = 0;
+        }
+        fp32 softmax_denominator_val = 0;
+
+        switch (get_activation_type())
+        {
+        case ActivationType::SoftMax:
+
+            for (size_t i = 0; i < output_neuron_count; i++)
+            {
+                softmax_denominator_val += std::exp(output_before_activation[i]/(SI_VALS[layer_num] * SW_VALS[layer_num]));
+            }
+            for (i = 0; i < output_neuron_count; i++)
+            {
+                getOutputData().get<fp32>(i) = std::exp(output_before_activation[i]/(SI_VALS[layer_num] * SW_VALS[layer_num])) / softmax_denominator_val;
+            }
+            break;
+
+
+
+        case ActivationType::ReLU:
+        {
+            float M      = SI_VALS[layer_num + 1] / (SI_VALS[layer_num] * SW_VALS[layer_num]);
+            float z_next = SZ_VALS[layer_num + 1];
+            for (i = 0; i < output_neuron_count; i++)
+            {
+                
+                float v = std::nearbyint(output_before_activation[i] * M) + z_next;   // requantize
+                v = std::clamp(v, z_next, max_value);                                        // ReLU + saturation
+                getOutputData().get<i8>(i) = static_cast<i8>(v);
+            }
+          break;
+        }
+        
+        default:
+            break;
+        }
+    }
+
+    void DenseLayer::computeAccelerated(const LayerData &dataIn, const int layer_num) const
+    {
+//        computeNaive(dataIn, layer_num);
+        size_t input_neuron_count  = getInputParams().dims[0];  // 2048
+        size_t output_neuron_count = getOutputParams().dims[0]; // 256
+
+        std::vector<i32> output_before_activation;
+
+        size_t i = 0, j = 0;
+
+        // dense_weights_2D is a pointer that points to a collection of 256 elemetns that store fp32
+        // type cast the 1d array into pointer to an array of 256 floats and assign it to dense_weights_2D
+//        const fp32 (*dense_weights_2D)[output_neuron_count] = (fp32 (*)[output_neuron_count])(getWeightData().raw());
+
+     
+        for (i = 0; i < output_neuron_count; i++){
+            
+            i32 bias = getBiasData().get<i32>(i);
+
+            // load bias as signed 32 bit
+            Xil_Out32(XPAR_AXI_FIFO_0_BASEADDR + XLLF_TDFD_OFFSET, bias); 
+
+            for (j = 0; j < input_neuron_count; j++){
+
+                i8 weight = getWeightData().get<i8>(output_neuron_count * j + i);
+                i8 activation = dataIn.get<i8>(j);
+
+                // send these two by concatinating them
+                Xil_Out32(XPAR_AXI_FIFO_0_BASEADDR + XLLF_TDFD_OFFSET, ML::concat_hex_to_i32(activation, weight)); 
+            }
+
+            // send TLAST and how many data we sent
+            // we sent (j) + one_bias    each data that we sent was 4 bytes
+            Xil_Out32(XPAR_AXI_FIFO_0_BASEADDR + XLLF_TLF_OFFSET, 4 * (j + 1));
+
+            i32 mac_out = ML::read_packet();
+
+            output_before_activation.push_back(mac_out);
+
         }
         fp32 softmax_denominator_val = 0;
 

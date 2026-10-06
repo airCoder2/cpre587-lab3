@@ -19,6 +19,7 @@
 
 #ifdef ZEDBOARD
 #include <file_transfer/file_transfer.h>
+//#include "../zedboard/file_transfer/file_transfer.h"
 #endif
 
 namespace ML
@@ -184,7 +185,7 @@ namespace ML
 
         // Run inference on the model
         timer.start();
-        const LayerData &output = model.inference(quantized_image, Layer::InfType::NAIVE);
+        const LayerData &output = model.inference(quantized_image, Layer::InfType::ACCELERATED);
         timer.stop();
 
         // Compare the output

@@ -26,6 +26,9 @@ const LayerData& Model::inferenceLayer(const LayerData& inData, const int layerN
     assert(layer.isOutputBufferAlloced() && "Output buffer must be allocated prior to inference");
 
     switch (infType) {
+    case Layer::InfType::ACCELERATED:
+        layer.computeAccelerated(inData, layerNum); 
+        break;
     case Layer::InfType::NAIVE:
         layer.computeNaive(inData, layerNum);
         break;

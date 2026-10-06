@@ -55,6 +55,12 @@ namespace ML
         
     }
 
+    void MaxPoolingLayer::computeAccelerated(const LayerData &dataIn, const int layer_num) const
+    {
+        // No mac operation, so just call computeNaive
+        computeNaive(dataIn, layer_num);
+    }
+
     void MaxPoolingLayer::computeThreaded(const LayerData &dataIn) const
     {
         // TODO: Your Code Here...

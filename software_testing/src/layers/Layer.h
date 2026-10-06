@@ -173,6 +173,7 @@ namespace ML
         // Inference Type
         enum class InfType
         {
+            ACCELERATED,
             NAIVE,
             THREADED,
             TILED,
@@ -217,6 +218,7 @@ namespace ML
             outData.freeData();
         }
 
+        virtual void computeAccelerated(const LayerData &dataIn, const int layer_num) const = 0;
         virtual void computeNaive(const LayerData &dataIn, const int layer_num) const = 0;
         virtual void computeThreaded(const LayerData &dataIn) const = 0;
         virtual void computeTiled(const LayerData &dataIn) const = 0;

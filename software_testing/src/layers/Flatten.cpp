@@ -20,6 +20,11 @@ namespace ML
         getOutputData() = dataIn;
     }
 
+    void FlattenLayer::computeAccelerated(const LayerData &dataIn, const int layer_num) const
+    {
+        computeNaive(dataIn, layer_num);
+    }
+
     void FlattenLayer::computeThreaded(const LayerData &dataIn) const
     {
         // TODO: Your Code Here...
