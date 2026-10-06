@@ -49,6 +49,8 @@ app config -name $params(project_name) -add include-path "../src/zedboard"
 app config -name $params(project_name) -add compiler-misc "-std=c++17 -O3"
 app config -name $params(project_name) -add define-compiler-symbols "ZEDBOARD"
 app config -name $params(project_name) -add linker-misc "-Wl,--defsym=_HEAP_SIZE=0x8000000"
+# The platform's bspLib path variable doesn't always resolve, leaving -lxil unfound at link time
+app config -name $params(project_name) -add library-search-path "$params(workspace_dir)/$params(platform_name)/export/$params(platform_name)/sw/$params(platform_name)/standalone_domain/bsplib/lib"
 
 puts "Generating platform"
 platform active $params(platform_name)

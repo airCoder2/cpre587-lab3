@@ -31,7 +31,7 @@ entity staged_mac is
 
         -- AXIS slave data interface
 		SD_AXIS_TREADY	: out	std_logic;
-		SD_AXIS_TDATA	: in	std_logic_vector(C_DATA_WIDTH*2-1 downto 0);  -- Packed data input
+		SD_AXIS_TDATA	: in	std_logic_vector(31 downto 0);  -- Packed data input
 		SD_AXIS_TLAST	: in	std_logic;
         SD_AXIS_TUSER   : in    std_logic;  -- Should we treat this first value in the stream as an inital accumulate value?
 		SD_AXIS_TVALID	: in	std_logic;
@@ -56,7 +56,7 @@ architecture behavioral of staged_mac is
 
     -- MY SIGNALS: 
     signal s_last_in_reg_out : std_logic;
-    signal s_data_in_reg_out : std_logic_vector(C_DATA_WIDTH*2-1 downto 0);
+    signal s_data_in_reg_out : std_logic_vector(31 downto 0);
     signal s_valid_in_reg_out: std_logic;
 
     signal s_accumulator_reg_out : std_logic_vector(31 downto 0);
@@ -130,7 +130,7 @@ begin
                 -- if expected_bias was set to 1, and data is valid, then load bias.
                 -- Otherwise store adder_out 
                 if (s_expected_bias = '1' and s_valid_in_reg_out = '1') then
-                    s_accumulator_reg_out <= (31 downto 16 => '0') & s_data_in_reg_out(15 downto 0);
+                    s_accumulator_reg_out <= s_data_in_reg_out;
                 else
                     s_accumulator_reg_out <= s_adder_out;
                 end if;
