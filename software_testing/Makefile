@@ -22,7 +22,7 @@ EXE_DEBUG = $(BIN)/main_debug
 # else # Linux
 	CC_LINUX = g++ 
 	CC_WIN = x86_64-w64-mingw32-g++ -static-libgcc -static-libstdc++ -fstack-protector
-	CC_ALL = -Wall -Werror -pedantic -std=c++11
+	CC_ALL = -Wall -Werror -pedantic -std=c++17
 	CC_DEBUG = -g -Og
 	CC_OPT_FLAGS = -O3
 	CC_SIMD_FLAGS = -march=native

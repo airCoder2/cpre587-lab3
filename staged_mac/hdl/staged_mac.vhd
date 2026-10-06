@@ -65,6 +65,7 @@ architecture behavioral of staged_mac is
     signal s_adder_operand_b : std_logic_vector(31 downto 0);
     signal s_adder_out       : std_logic_vector(31 downto 0);
     signal s_mult_out        : std_logic_vector(C_DATA_WIDTH*2-1 downto 0);
+    signal s_mult_out_extended : std_logic_vector(31 downto 0);
 
     signal s_ready_out : std_logic;
     signal s_expected_bias : std_logic;
@@ -89,13 +90,20 @@ begin
     --s_adder_operand_a <= s_accumulator_reg_out when (s_delayed_last_in = '0') else (others => '0'); 
     
     -- multiply (15:8) and (7:0) of incoming data, if data is valid
-    s_mult_out <= std_logic_vector(unsigned(s_data_in_reg_out(C_DATA_WIDTH*2-1 downto C_DATA_WIDTH)) * unsigned(s_data_in_reg_out(C_DATA_WIDTH-1 downto 0)));
+    s_mult_out <= std_logic_vector(signed(s_data_in_reg_out(C_DATA_WIDTH*2-1 downto C_DATA_WIDTH)) * signed(s_data_in_reg_out(C_DATA_WIDTH-1 downto 0)));
+    
+    -- THis is for sign extending the multiplicaiton
+    with s_mult_out(C_DATA_WIDTH*2-1) select
+        s_mult_out_extended <= (31 downto C_DATA_WIDTH*2 => '0') & s_mult_out when '0',
+                               (31 downto C_DATA_WIDTH*2 => '1') & s_mult_out when '1',
+                               (others => '0') when others;
 
-    s_adder_operand_b <= (31 downto C_DATA_WIDTH*2 => '0') & s_mult_out
+    -- if data is not valid, then add 0 to current sum
+    s_adder_operand_b <= s_mult_out_extended
                          when (s_valid_in_reg_out = '1') else (others => '0'); 
     
     -- This should work if we can guarantee that we always load the bias one clock cycle after tlast
-     s_adder_out <= std_logic_vector(unsigned(s_accumulator_reg_out) + unsigned(s_adder_operand_b));
+     s_adder_out <= std_logic_vector(signed(s_accumulator_reg_out) + signed(s_adder_operand_b));
     -- s_adder_out <= std_logic_vector(unsigned(s_adder_operand_a) + unsigned(s_adder_operand_b));
 
 
